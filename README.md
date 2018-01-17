@@ -1,12 +1,16 @@
 #### PolyfillScroll
 pc滚动条样式修改有极大兼容性问题，为了网页美观，polyfillScroll模拟滚动条，内容通过css3 translate3d模拟滚动，兼容移动端+PC，模拟滚动兼容IE9，如果是IE9以下会使用默认滚动条。cb回调函数会在触发滚动的时候发布distance，也就是滚动内容移动的距离。
+
+
 适用于：模拟滚动，模拟滚动条，滚动加载
+
+
 PolyfillScroll支持模拟内容以下事件：
 - 移动端touch
 - PC鼠标滚轮滚动
 - PC拖动滚动条
 
-#### Use
+#### Use example
 ```
 [PolyfillScroll touch容器 内容模拟滚动]
 @param  {string} scrollWrap    [touch容器]
