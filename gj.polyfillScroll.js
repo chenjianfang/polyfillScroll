@@ -1,4 +1,52 @@
-const os = (function(){
+/**
+ * [PolyfillScroll touch容器 内容模拟滚动]
+ * @param  {string} scrollWrap    [touch容器]
+ * @param  {string} scrollContent [transform内容]
+ * @param  {Object} bar [scrollBar style] 可选参数
+ * @param  {Function} cb(distance) [每次触发移动就会发布cb函数；distance：从容器顶部滑动了的距离，符号为正数]
+ * @return null
+ *
+ * @example  ***scrollWrap建议类名.scroll-wrap；scrollContent建议类名.scroll-content***
+ *
+ * const entity = new PolyfillScroll({
+ *    scrollWrap:".scroll-wrap",
+ *    scrollContent: ".scroll-content",
+ *    bar:{   //=>可以省略或者添加单个bar.width字段
+ *        width:"10px",
+ *        height: "40px",
+ *        background: "#000",
+ *        right:"2px"
+ *    },
+ *    cb(distance){
+ *        console.log(distance)
+ *    }
+ * });
+ *
+ * @example
+ *  let scrollWrap = document.querySelector('.scroll-wrap');
+ *  let scrollContent = document.querySelector('.scroll-wrap ul');
+ *  let scrollWrapHeight = parseFloat(window.getComputedStyle(scrollWrap,null).getPropertyValue('height'));
+ *  const entity = new PolyfillScroll({
+ *      scrollWrap:".scroll-wrap",
+ *      scrollContent: ".scroll-wrap ul",
+ *      cb(distance){
+ *          console.log(distance);
+ *          const contentHeight = parseFloat(window.getComputedStyle(scrollContent,null).getPropertyValue('height'));
+ *          if(contentHeight - distance - scrollWrapHeight < 150){
+ *              if(that.scrollLock) return;
+ *              that.scrollLock = true;
+ *              if(that.currentIdx === 0){
+ *                  that.getModRank();
+ *              }else{
+ *                  that.getUserRank();
+ *              }
+ *          }
+ *      }
+ *  });
+ * 
+ */
+
+ const os = (function(){
       var ua = navigator.userAgent,  
       isWindowsPhone = /(?:Windows Phone)/.test(ua),  
       isSymbian = /(?:SymbianOS)/.test(ua) || isWindowsPhone,   
@@ -37,10 +85,12 @@ export default class PolyfillScroll{
         this.scrollWrap = document.querySelector(scrollWrap);
         this.scrollContent = document.querySelector(scrollContent);
         this.scrollWrapHeight = parseFloat(window.getComputedStyle(this.scrollWrap,null).getPropertyValue('height'));
+        if(isNaN(this.scrollWrapHeight)) this.scrollWrapHeight = parseFloat(window.getComputedStyle(this.scrollWrap,null).getPropertyValue('max-height'));
         this.contentHeight = parseFloat(window.getComputedStyle(this.scrollContent,null).getPropertyValue('height'));
         if(this.contentHeight <= this.scrollWrapHeight) return;
 
         this.scrollBarMove = 0;
+        this.contentHeightNotEnough = false;
 
         this.bar = {};
         this.bar.width = width;
@@ -102,6 +152,7 @@ export default class PolyfillScroll{
         scrollBar.style.position="absolute";
         track.appendChild(scrollBar);
         this.scrollWrap.appendChild(track);
+        this.track = track;
 
         let downMove = false;
         let downMoveDistance = 0;
@@ -151,8 +202,10 @@ export default class PolyfillScroll{
 
     //移动滚动条
     moveScrollBar(){
-        this.scrollBarMove = this.moveDistance * (this.scrollWrapHeight - parseFloat(this.bar.height)) / (this.contentHeight - this.scrollWrapHeight);
-        this.scrollBar && (this.scrollBar.style.top = this.scrollBarMove + "px");
+        if(this.bar){
+            this.scrollBarMove = this.moveDistance * (this.scrollWrapHeight - parseFloat(this.bar.height)) / (this.contentHeight - this.scrollWrapHeight);
+            this.scrollBar && (this.scrollBar.style.top = this.scrollBarMove + "px");
+        }
     }
 
     // fix某些浏览器不支持transfrom属性
@@ -167,6 +220,9 @@ export default class PolyfillScroll{
     //move content
     translateMove(moveY,isPC,slide){
         this.contentHeight = parseFloat(window.getComputedStyle(this.scrollContent,null).getPropertyValue('height'));
+        if(this.scrollWrapHeight >= this.contentHeight) this.contentHeightNotEnough = true;
+        else this.contentHeightNotEnough = false;
+        if(this.contentHeightNotEnough && moveY) return;
         if(this.moveDistance + moveY <= 0){
             this.moveDistance = 0;
         }else if(this.moveDistance + moveY >= this.contentHeight-this.scrollWrapHeight){
@@ -180,6 +236,7 @@ export default class PolyfillScroll{
         }else{
             this.scrollContent.setAttribute('style','-webkit-transform:translate3d(0px, '+(-this.moveDistance)+'px, 0px);-ms-transform:translate3d(0px, '+(-this.moveDistance)+'px, 0px);-moz-transform:translate3d(0px, '+(-this.moveDistance)+'px, 0px);transform:translate3d(0px, '+(-this.moveDistance)+'px, 0px);');
         }
+        this.scrollContent.setAttribute('data-dist',this.moveDistance);
         if(isPC) this.moveScrollBar(); // pc有滚动条
 
         //移动 发布移动的距离
@@ -243,9 +300,9 @@ export default class PolyfillScroll{
     }
 
     //刷新
-    refresh(){
+    refresh(dist = 0){
         this.moveDistance = 0;
-        if(os.isPc) this.translateMove(0,true);
-        else this.translateMove(0);
+        if(os.isPc) this.translateMove(dist,true);
+        else this.translateMove(dist);
     }
 }
