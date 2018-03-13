@@ -56,4 +56,7 @@ const entity = new PolyfillScroll({
          }
      }
  });
+
+ //如果需要滚动到指定距离，比如内容向上移动到100px的位置
+ entity.refresh(100);
 ```
